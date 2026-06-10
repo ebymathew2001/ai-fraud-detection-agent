@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fraud Detection Dashboard</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #0f1117;
+      --surface:     #1a1d27;
+      --surface2:    #222535;
+      --border:      #2e3148;
+      --text:        #e2e4f0;
+      --text-muted:  #7b7f9e;
+      --accent:      #6c63ff;
+      --accent-dim:  #2a2748;
+      --low:         #22c55e;  --low-bg:      #052e16;
+      --medium:      #f59e0b;  --medium-bg:   #2d1d00;
+      --high:        #f97316;  --high-bg:     #2c1500;
+      --critical:    #ef4444;  --critical-bg: #2c0a0a;
+      --radius: 10px; --radius-lg: 16px;
+    }
+
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-size: 14px; line-height: 1.6; min-height: 100vh;
+    }
+
+    /* ── Layout ─────────────────────────────────────────── */
+    .shell { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+
+    /* ── Sidebar ─────────────────────────────────────────── */
+    .sidebar {
+      background: var(--surface); border-right: 1px solid var(--border);
+      padding: 28px 0; display: flex; flex-direction: column;
+      gap: 4px; position: sticky; top: 0; height: 100vh;
+    }
+    .sidebar-logo { padding: 0 20px 24px; border-bottom: 1px solid var(--border); margin-bottom: 12px; }
+    .logo-icon {
+      width: 36px; height: 36px; border-radius: 10px; background: var(--accent);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; margin-bottom: 10px;
+    }
+    .sidebar-logo h1 { font-size: 13px; font-weight: 600; }
+    .sidebar-logo p  { font-size: 11px; color: var(--text-muted); }
+
+    .nav-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 9px 20px; cursor: pointer; color: var(--text-muted);
+      font-size: 13px; border-left: 2px solid transparent; transition: all .15s;
+    }
+    .nav-item:hover  { background: var(--surface2); color: var(--text); }
+    .nav-item.active { background: var(--accent-dim); color: var(--accent); border-left-color: var(--accent); }
+    .nav-icon { font-size: 16px; }
+
+    /* ── Main ────────────────────────────────────────────── */
+    .main { padding: 32px 36px; overflow-y: auto; }
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* ── Page header ─────────────────────────────────────── */
+    .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+    .page-header h2 { font-size: 20px; font-weight: 600; }
+    .page-header p  { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+
+    /* ── Stats ───────────────────────────────────────────── */
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 28px; }
+    .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; }
+    .stat-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; }
+    .stat-value { font-size: 28px; font-weight: 700; margin-top: 4px; }
+    .stat-value.c  { color: var(--critical); }
+    .stat-value.h  { color: var(--high); }
+    .stat-value.m  { color: var(--medium); }
+    .stat-value.ok { color: var(--low); }
+
+    /* ── Card ────────────────────────────────────────────── */
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px 22px; margin-bottom: 20px; }
+    .card-title { font-size: 14px; font-weight: 600; margin-bottom: 16px; }
+
+    /* ── Table ───────────────────────────────────────────── */
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { text-align: left; padding: 8px 12px; color: var(--text-muted); font-weight: 500; border-bottom: 1px solid var(--border); font-size: 11px; text-transform: uppercase; letter-spacing: .05em; }
+    td { padding: 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--surface2); }
+
+    /* ── Badges ──────────────────────────────────────────── */
+    .badge { display: inline-block; padding: 3px 9px; border-radius: 99px; font-size: 11px; font-weight: 600; letter-spacing: .04em; }
+    .badge-low      { background: var(--low-bg);      color: var(--low); }
+    .badge-medium   { background: var(--medium-bg);   color: var(--medium); }
+    .badge-high     { background: var(--high-bg);      color: var(--high); }
+    .badge-critical { background: var(--critical-bg); color: var(--critical); }
+    .badge-pending  { background: #1c1c2e; color: var(--text-muted); }
+    .badge-done     { background: #0d2a1e; color: var(--low); }
+
+    /* ── Buttons ─────────────────────────────────────────── */
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 8px; border: none; cursor: pointer; font-size: 12px; font-weight: 500; transition: all .15s; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: #7c75ff; }
+    .btn-primary:disabled { background: #3a3760; color: #555; cursor: not-allowed; }
+    .btn-ghost { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+    .btn-ghost:hover { background: var(--border); }
+
+    /* ── Score bar ───────────────────────────────────────── */
+    .bar-bg { height: 6px; background: var(--border); border-radius: 99px; overflow: hidden; margin-top: 6px; }
+    .bar-fill { height: 100%; border-radius: 99px; transition: width .5s ease; }
+
+    /* ── Investigation grid ──────────────────────────────── */
+    .inv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 16px; }
+    .inv-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px 20px; cursor: pointer; transition: border-color .15s; }
+    .inv-card:hover { border-color: var(--accent); }
+    .inv-card-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+    .inv-txn { font-size: 13px; font-weight: 600; }
+    .inv-sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .reasons-list { list-style: none; margin-top: 12px; }
+    .reasons-list li { font-size: 12px; color: var(--text-muted); padding: 4px 0; border-bottom: 1px solid var(--border); display: flex; gap: 8px; }
+    .reasons-list li:last-child { border-bottom: none; }
+    .reasons-list li::before { content: "↗"; color: var(--accent); flex-shrink: 0; }
+
+    /* ── Recommendation pill ─────────────────────────────── */
+    .rec { display: inline-block; padding: 3px 10px; border-radius: 99px; font-size: 11px; font-weight: 700; letter-spacing: .04em; }
+    .rec-ALLOW      { background: var(--low-bg);      color: var(--low); }
+    .rec-SEND_OTP   { background: var(--medium-bg);   color: var(--medium); }
+    .rec-ESCALATE   { background: var(--high-bg);      color: var(--high); }
+    .rec-BLOCK_CARD { background: var(--critical-bg); color: var(--critical); }
+
+    /* ── Sub-score grid ──────────────────────────────────── */
+    .sub-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 14px 0; }
+    .sub-item { background: var(--surface2); border-radius: 8px; padding: 10px 14px; }
+    .sub-label { font-size: 11px; color: var(--text-muted); }
+    .sub-val   { font-size: 22px; font-weight: 700; margin-top: 2px; }
+
+    /* ── Modal ───────────────────────────────────────────── */
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.75); display: none; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
+    .overlay.open { display: flex; }
+    .modal { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; padding: 28px 30px; }
+    .modal-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+    .modal-head h3 { font-size: 17px; font-weight: 600; }
+    .modal-close { background: none; border: none; color: var(--text-muted); font-size: 22px; cursor: pointer; line-height: 1; }
+    .modal-close:hover { color: var(--text); }
+    .detail-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+    .detail-row:last-child { border-bottom: none; }
+    .detail-key { color: var(--text-muted); }
+    .detail-val { font-weight: 500; }
+
+    /* ── Toast ───────────────────────────────────────────── */
+    .toast { position: fixed; bottom: 24px; right: 24px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 18px; font-size: 13px; z-index: 200; transform: translateY(80px); opacity: 0; transition: all .25s; pointer-events: none; }
+    .toast.show { transform: translateY(0); opacity: 1; }
+
+    /* ── Spinner ─────────────────────────────────────────── */
+    .spin { width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: rot .6s linear infinite; display: inline-block; }
+    @keyframes rot { to { transform: rotate(360deg); } }
+
+    /* ── Empty state ─────────────────────────────────────── */
+    .empty { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+    .empty-icon { font-size: 40px; margin-bottom: 12px; }
+    .empty h3 { font-size: 15px; color: var(--text); margin-bottom: 6px; }
+
+    .refresh { background: none; border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; color: var(--text-muted); cursor: pointer; font-size: 12px; }
+    .refresh:hover { color: var(--text); }
+
+    .section-label { font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- ── Sidebar ──────────────────────────────────────────── -->
+  <nav class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">🛡️</div>
+      <h1>FraudGuard AI</h1>
+      <p>Detection Dashboard</p>
+    </div>
+    <div class="nav-item active" id="nav-alerts"         onclick="showPage('alerts')">
+      <span class="nav-icon">🚨</span> Alerts
+    </div>
+    <div class="nav-item"        id="nav-investigations" onclick="showPage('investigations')">
+      <span class="nav-icon">🔍</span> Investigations
+    </div>
+  </nav>
+
+  <!-- ── Main ─────────────────────────────────────────────── -->
+  <main class="main">
+
+    <!-- ══ ALERTS PAGE ══════════════════════════════════════ -->
+    <div class="page active" id="page-alerts">
+      <div class="page-header">
+        <div>
+          <h2>🚨 Suspicious Alerts</h2>
+          <p>Pre-flagged transactions awaiting investigation</p>
+        </div>
+        <button class="refresh" onclick="loadAlerts()">↻ Refresh</button>
+      </div>
+
+      <div class="stats">
+        <div class="stat-card"><div class="stat-label">Total Alerts</div> <div class="stat-value"    id="s-total">—</div></div>
+        <div class="stat-card"><div class="stat-label">Investigated</div> <div class="stat-value ok" id="s-done">—</div></div>
+        <div class="stat-card"><div class="stat-label">Pending</div>      <div class="stat-value m"  id="s-pend">—</div></div>
+        <div class="stat-card"><div class="stat-label">Total Exposure</div><div class="stat-value c" id="s-exp">—</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Flagged Transactions</div>
+        <div id="alerts-wrap">
+          <div class="empty"><div class="spin"></div><p style="margin-top:12px">Loading...</p></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ INVESTIGATIONS PAGE ══════════════════════════════ -->
+    <div class="page" id="page-investigations">
+      <div class="page-header">
+        <div>
+          <h2>🔍 Investigations</h2>
+          <p>AI-generated fraud investigation reports</p>
+        </div>
+        <button class="refresh" onclick="loadInvestigations()">↻ Refresh</button>
+      </div>
+      <div id="inv-wrap">
+        <div class="empty"><div class="spin"></div><p style="margin-top:12px">Loading...</p></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ── Modal ─────────────────────────────────────────────── -->
+<div class="overlay" id="overlay" onclick="closeBg(event)">
+  <div class="modal" id="modal-body"></div>
+</div>
+
+<!-- ── Toast ─────────────────────────────────────────────── -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ────────────────────────────────────────────────────────────
+// Helpers
+// ────────────────────────────────────────────────────────────
+const fmt  = n => 'Rs.' + Number(n).toLocaleString('en-IN');
+const $    = id => document.getElementById(id);
+
+function scoreColor(s) {
+  if (s <= 30) return 'var(--low)';
+  if (s <= 55) return 'var(--medium)';
+  if (s <= 75) return 'var(--high)';
+  return 'var(--critical)';
+}
+
+function riskBadge(l) {
+  const m = {LOW:'low',MEDIUM:'medium',HIGH:'high',CRITICAL:'critical'};
+  return `<span class="badge badge-${m[l]||'pending'}">${l}</span>`;
+}
+
+function recPill(r) {
+  return `<span class="rec rec-${r}">${r.replace('_',' ')}</span>`;
+}
+
+function toast(msg, ms = 3000) {
+  const el = $('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), ms);
+}
+
+// ────────────────────────────────────────────────────────────
+// Navigation
+// ────────────────────────────────────────────────────────────
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  $('page-' + name).classList.add('active');
+  $('nav-'  + name).classList.add('active');
+  if (name === 'alerts')         loadAlerts();
+  if (name === 'investigations') loadInvestigations();
+}
+
+// ────────────────────────────────────────────────────────────
+// ALERTS PAGE
+// ────────────────────────────────────────────────────────────
+let _cache = {};   // txn_id → report object
+
+async function loadAlerts() {
+  $('alerts-wrap').innerHTML = '<div class="empty"><div class="spin"></div><p style="margin-top:12px">Loading...</p></div>';
+  try {
+    const alerts = await fetch('/alerts').then(r => r.json());
+    renderAlerts(alerts);
+    const total   = alerts.length;
+    const done    = alerts.filter(a => a.investigated).length;
+    const exp     = alerts.reduce((s,a) => s + a.amount, 0);
+    $('s-total').textContent = total;
+    $('s-done').textContent  = done;
+    $('s-pend').textContent  = total - done;
+    $('s-exp').textContent   = fmt(exp);
+  } catch {
+    $('alerts-wrap').innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><h3>Could not load alerts</h3><p>Is the server running?</p></div>';
+  }
+}
+
+function renderAlerts(alerts) {
+  if (!alerts.length) {
+    $('alerts-wrap').innerHTML = '<div class="empty"><div class="empty-icon">✅</div><h3>No suspicious transactions</h3></div>';
+    return;
+  }
+  const rows = alerts.map(a => `
+    <tr id="row-${a.txn_id}">
+      <td><strong>${a.txn_id}</strong></td>
+      <td>${a.customer_name}</td>
+      <td><strong>${fmt(a.amount)}</strong></td>
+      <td>${a.merchant_name}</td>
+      <td><span class="badge badge-pending" style="background:#1a1d27">${a.merchant_category}</span></td>
+      <td>${a.transaction_location}</td>
+      <td id="st-${a.txn_id}">${a.investigated ? '<span class="badge badge-done">✓ Done</span>' : '<span class="badge badge-pending">Pending</span>'}</td>
+      <td id="ac-${a.txn_id}">
+        ${a.investigated
+          ? `<button class="btn btn-ghost" onclick="openModal('${a.txn_id}')">View Report</button>`
+          : `<button class="btn btn-primary" id="btn-${a.txn_id}" onclick="investigate('${a.txn_id}')">Investigate</button>`}
+      </td>
+    </tr>`).join('');
+
+  $('alerts-wrap').innerHTML = `
+    <table>
+      <thead><tr>
+        <th>TXN ID</th><th>Customer</th><th>Amount</th>
+        <th>Merchant</th><th>Category</th><th>Location</th>
+        <th>Status</th><th>Action</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+// ────────────────────────────────────────────────────────────
+// INVESTIGATE
+// ────────────────────────────────────────────────────────────
+async function investigate(txnId) {
+  const btn = $('btn-' + txnId);
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span> Running agent...';
+
+  try {
+    const res = await fetch('/investigations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ transaction_id: txnId }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      toast('❌ ' + (err.detail || 'Agent error'));
+      btn.disabled = false; btn.innerHTML = 'Investigate';
+      return;
+    }
+
+    const report = await res.json();
+    _cache[txnId] = report;
+    toast(`✅ ${txnId} → ${report.risk_level}  (score ${report.risk_score})`);
+
+    $('st-' + txnId).innerHTML =
+      `${riskBadge(report.risk_level)} <span style="margin-left:6px;font-size:12px;color:var(--text-muted)">${report.risk_score}/100</span>`;
+
+    $('ac-' + txnId).innerHTML =
+      `<button class="btn btn-ghost" onclick="openModal('${txnId}')">View Report</button>`;
+
+  } catch {
+    toast('❌ Network error');
+    btn.disabled = false; btn.innerHTML = 'Investigate';
+  }
+}
+
+// ────────────────────────────────────────────────────────────
+// INVESTIGATIONS PAGE
+// ────────────────────────────────────────────────────────────
+async function loadInvestigations() {
+  $('inv-wrap').innerHTML = '<div class="empty"><div class="spin"></div><p style="margin-top:12px">Loading...</p></div>';
+  try {
+    const data = await fetch('/investigations').then(r => r.json());
+
+    if (!data.length) {
+      $('inv-wrap').innerHTML = `<div class="empty"><div class="empty-icon">🔍</div><h3>No investigations yet</h3><p>Go to Alerts and click "Investigate".</p></div>`;
+      return;
+    }
+
+    data.forEach(inv => { _cache[inv.txn_id] = inv; });
+
+    const cards = data.map(inv => `
+      <div class="inv-card" onclick="openModal('${inv.txn_id}')">
+        <div class="inv-card-top">
+          <div>
+            <div class="inv-txn">${inv.txn_id}</div>
+            <div class="inv-sub">${inv.customer_name} · ${inv.transaction_location}</div>
+          </div>
+          ${riskBadge(inv.risk_level)}
+        </div>
+
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px">
+          ${fmt(inv.amount)} · ${inv.merchant_category}
+        </div>
+
+        <div style="font-size:11px;color:var(--text-muted);display:flex;justify-content:space-between;margin-bottom:3px">
+          <span>Risk Score</span>
+          <span style="font-weight:600;color:${scoreColor(inv.risk_score)}">${inv.risk_score}/100</span>
+        </div>
+        <div class="bar-bg"><div class="bar-fill" style="width:${inv.risk_score}%;background:${scoreColor(inv.risk_score)}"></div></div>
+
+        <div style="margin-top:12px">${recPill(inv.recommendation)}</div>
+
+        <ul class="reasons-list" style="margin-top:10px">
+          ${(inv.reasons||[]).slice(0,2).map(r=>`<li>${r}</li>`).join('')}
+          ${inv.reasons&&inv.reasons.length>2?`<li style="color:var(--accent);font-size:11px">+${inv.reasons.length-2} more...</li>`:''}
+        </ul>
+
+        <div style="margin-top:10px;font-size:11px;color:var(--text-muted)">
+          ${new Date(inv.created_at).toLocaleString()}
+        </div>
+      </div>`).join('');
+
+    $('inv-wrap').innerHTML = `<div class="inv-grid">${cards}</div>`;
+  } catch {
+    $('inv-wrap').innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><h3>Could not load investigations</h3></div>';
+  }
+}
+
+// ────────────────────────────────────────────────────────────
+// MODAL
+// ────────────────────────────────────────────────────────────
+async function openModal(txnId) {
+  $('overlay').classList.add('open');
+  $('modal-body').innerHTML = '<div class="empty"><div class="spin"></div></div>';
+
+  let inv = _cache[txnId];
+  if (!inv) {
+    try {
+      inv = await fetch(`/investigations/${txnId}`).then(r => r.json());
+      _cache[txnId] = inv;
+    } catch {
+      $('modal-body').innerHTML = '<div class="empty"><h3>Failed to load</h3></div>';
+      return;
+    }
+  }
+
+  const r   = inv.report || inv;
+  const sub = r.sub_scores || {};
+
+  $('modal-body').innerHTML = `
+    <div class="modal-head">
+      <div>
+        <h3>Investigation Report</h3>
+        <div style="color:var(--text-muted);font-size:13px;margin-top:2px">${r.txn_id} · ${r.customer_name||''}</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+
+    <div style="text-align:center;padding:20px 0 22px;border-bottom:1px solid var(--border)">
+      <div style="font-size:54px;font-weight:800;color:${scoreColor(r.risk_score)};line-height:1">${r.risk_score}</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:2px">Risk Score / 100</div>
+      <div style="margin-top:14px;display:flex;justify-content:center;gap:10px">
+        ${riskBadge(r.risk_level)} ${recPill(r.recommendation)}
+      </div>
+    </div>
+
+    <div style="margin:20px 0">
+      <div class="section-label">Transaction</div>
+      <div class="detail-row"><span class="detail-key">Amount</span>   <span class="detail-val">${fmt(r.amount)}</span></div>
+      <div class="detail-row"><span class="detail-key">Merchant</span> <span class="detail-val">${r.merchant||''}</span></div>
+      <div class="detail-row"><span class="detail-key">Category</span> <span class="detail-val">${r.category||''}</span></div>
+      <div class="detail-row"><span class="detail-key">Location</span> <span class="detail-val">${r.location||''}</span></div>
+      <div class="detail-row"><span class="detail-key">Avg Spend</span><span class="detail-val">${fmt(r.avg_spend||0)}</span></div>
+    </div>
+
+    <div style="margin-bottom:20px">
+      <div class="section-label">Score Breakdown</div>
+      <div class="sub-grid">
+        <div class="sub-item"><div class="sub-label">Amount</div>   <div class="sub-val" style="color:${scoreColor(sub.amount_score||0)}">${sub.amount_score||0}</div></div>
+        <div class="sub-item"><div class="sub-label">Location</div> <div class="sub-val" style="color:${scoreColor(sub.location_score||0)}">${sub.location_score||0}</div></div>
+        <div class="sub-item"><div class="sub-label">Merchant</div> <div class="sub-val" style="color:${scoreColor(sub.merchant_score||0)}">${sub.merchant_score||0}</div></div>
+        <div class="sub-item"><div class="sub-label">Pattern</div>  <div class="sub-val" style="color:${scoreColor(sub.pattern_score||0)}">${sub.pattern_score||0}</div></div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:20px">
+      <div class="section-label">AI Analysis Reasons</div>
+      <ul class="reasons-list" style="border:1px solid var(--border);border-radius:8px;padding:4px 14px">
+        ${(r.reasons||[]).map(x=>`<li>${x}</li>`).join('')}
+      </ul>
+    </div>
+
+    ${r.matched_patterns&&r.matched_patterns.length ? `
+    <div>
+      <div class="section-label">Matched Fraud Patterns</div>
+      ${r.matched_patterns.map(p=>`
+        <div style="font-size:12px;color:var(--text-muted);padding:8px 12px;background:var(--surface2);border-radius:8px;margin-bottom:6px;border-left:3px solid var(--accent)">${p}</div>
+      `).join('')}
+    </div>` : ''}
+
+    <div style="margin-top:20px;font-size:11px;color:var(--text-muted);text-align:right">
+      ID: ${r.investigation_id||inv.investigation_id}<br>
+      ${new Date(r.created_at||inv.created_at).toLocaleString()}
+    </div>`;
+}
+
+function closeModal() { $('overlay').classList.remove('open'); }
+function closeBg(e) { if (e.target === $('overlay')) closeModal(); }
+
+// ────────────────────────────────────────────────────────────
+// Boot
+// ────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', loadAlerts);
+</script>
+</body>
+</html>
