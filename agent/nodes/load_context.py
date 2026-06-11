@@ -18,6 +18,8 @@ What it does:
 
 
 import sqlite3
+import logging  
+logger = logging.getLogger(__name__)  
 from collections import Counter
 from agent.state import AgentState
 from config import DATABASE_URL
@@ -33,6 +35,7 @@ def _get_db() -> sqlite3.Connection:
 
 def load_context(state: AgentState) -> AgentState:
     txn_id = state["transaction_id"]
+    logger.info(f"load_context started for txn_id={txn_id}")
     conn   = _get_db()
 
     # 1. Fetch the suspicious transaction
@@ -69,6 +72,7 @@ def load_context(state: AgentState) -> AgentState:
         sum(h["amount"] for h in history) / len(history)
         if history else transaction["amount"]
     )
+    logger.info(f"customer={customer['name']}, history={len(history)} txns, avg_spend={avg_spend}")
 
     # 5. Top-3 locations and categories
     location_counts   = Counter(h["transaction_location"] for h in history)

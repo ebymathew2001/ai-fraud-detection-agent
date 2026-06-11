@@ -30,11 +30,11 @@ An intelligent fraud alert explainer system for retail banking. When a suspiciou
 ### Alerts Dashboard
 ![Alerts Dashboard](docs/screenshots/alerts.png)
 
-### Investigation Report Modal
-![Investigation Report](docs/screenshots/investigation_modal.png)
+### Investigation Report 
+![Investigation Report](docs/screenshots/investigation_report.png)
 
 ### Investigations Table
-![Investigations Table](docs/screenshots/investigations_table.png)
+![Investigations Table](docs/screenshots/investigation_table.png)
 
 ---
 

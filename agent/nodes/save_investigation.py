@@ -13,6 +13,8 @@ Kept deliberately separate from generate_report so that:
 
 
 import json
+import logging 
+logger = logging.getLogger(__name__) 
 import sqlite3
 from agent.state import AgentState
 from config import DATABASE_URL
@@ -25,8 +27,9 @@ def _get_db() -> sqlite3.Connection:
     return conn
 
 
-def save_investigation(state: AgentState) -> AgentState:
+def save_investigation(state: AgentState) -> AgentState: 
     report = state["report"]
+    logger.info(f"Saving investigation for txn_id={report['txn_id']}") 
     conn   = _get_db()
 
     conn.execute(

@@ -55,6 +55,7 @@ def get_alerts():
     Returns all SUSPICIOUS transactions with customer name.
     The 'investigated' boolean is derived via LEFT JOIN — not a stored column.
     """
+    logger.info("GET /alerts called")  
     conn = _get_db()
     rows = conn.execute("""
         SELECT
@@ -75,6 +76,7 @@ def get_alerts():
         ORDER BY t.timestamp DESC
     """).fetchall()
     conn.close()
+    logger.info(f"GET /alerts returning {len(rows)} alerts")
     return [dict(row) for row in rows]
 
 
@@ -140,6 +142,7 @@ def create_investigation(body: InvestigationRequest):
 @router.get("/investigations/{txn_id}")
 def get_investigation(txn_id: str):
     """Fetch one saved investigation. Returns 404 if not yet investigated."""
+    logger.info(f"GET /investigations/{txn_id} called") 
     conn = _get_db()
     row  = conn.execute(
         "SELECT * FROM investigations WHERE txn_id = ?", (txn_id,)
@@ -147,11 +150,12 @@ def get_investigation(txn_id: str):
     conn.close()
 
     if not row:
+        logger.warning(f"Investigation not found for {txn_id}")
         raise HTTPException(
             status_code=404,
             detail=f"No investigation found for '{txn_id}'. Run POST /investigations first."
         )
-
+    logger.info(f"Returning investigation for {txn_id}")
     result            = dict(row)
     result["reasons"] = json.loads(result["reasons"])
     result["report"]  = json.loads(result["report"])
@@ -165,6 +169,7 @@ def get_investigation(txn_id: str):
 @router.get("/investigations")
 def list_investigations():
     """Summary list of all investigations — no full report blob."""
+    logger.info("GET /investigations called")
     conn = _get_db()
     rows = conn.execute("""
         SELECT
@@ -191,5 +196,5 @@ def list_investigations():
         item            = dict(row)
         item["reasons"] = json.loads(item["reasons"])
         results.append(item)
-
+        
     return results

@@ -18,6 +18,9 @@ import chromadb
 
 from agent.state import AgentState
 
+import logging 
+logger = logging.getLogger(__name__) 
+
 import ollama
 from config import CHROMA_PATH,  EMBED_MODEL, CHROMA_COLLECTION
 
@@ -49,7 +52,7 @@ def search_patterns(state: AgentState) -> AgentState:
         f"location match type: {location_matched}, "
         f"customer home city: {home_city}"
     )
-
+    logger.info(f"ChromaDB query: {query}")
     query_embedding = _embed_query(query)
 
     collection = _get_chroma_collection()
@@ -62,4 +65,5 @@ def search_patterns(state: AgentState) -> AgentState:
     fraud_patterns = results["documents"][0] if results["documents"] else []
     pattern_score  = min(len(fraud_patterns) * 5, 15)
 
+    logger.info(f"pattern_score={pattern_score}, patterns_found={len(fraud_patterns)}")
     return {**state, "fraud_patterns": fraud_patterns, "pattern_score": pattern_score}

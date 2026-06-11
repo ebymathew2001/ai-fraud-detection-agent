@@ -19,6 +19,8 @@ CRITICAL DESIGN RULE:
 """
 
 from agent.state import AgentState
+import logging  
+logger = logging.getLogger(__name__) 
 
 
 def compute_risk_and_action(state: AgentState) -> AgentState:
@@ -41,7 +43,7 @@ def compute_risk_and_action(state: AgentState) -> AgentState:
     else:
         risk_level     = "CRITICAL"
         recommendation = "BLOCK_CARD"
-
+    logger.info(f"risk_score={risk_score}, risk_level={risk_level}, recommendation={recommendation}") 
     return {
         **state,
         "risk_score":     risk_score,

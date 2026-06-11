@@ -17,6 +17,8 @@ Pure Python — no DB, no LLM, no external calls.
 """
 
 from agent.state import AgentState
+import logging 
+logger = logging.getLogger(__name__) 
 
 # All Indian cities present in our seed data.
 # Extend this set if you add more cities to transactions.
@@ -54,5 +56,5 @@ def analyze_location(state: AgentState) -> AgentState:
         # Foreign country or completely unknown city
         score   = 30
         matched = "novel"
-
+    logger.info(f"location_score={score}, matched={matched}")
     return {**state, "location_score": score, "location_matched": matched}

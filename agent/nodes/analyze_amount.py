@@ -17,6 +17,8 @@ Pure Python — no DB, no LLM, no external calls.
 """
 
 from agent.state import AgentState
+import logging 
+logger = logging.getLogger(__name__) 
 
 
 def analyze_amount(state: AgentState) -> AgentState:
@@ -37,5 +39,5 @@ def analyze_amount(state: AgentState) -> AgentState:
         score = 25
     else:
         score = 40
-
+    logger.info(f"amount_score={score}, ratio={ratio:.2f}x") 
     return {**state, "amount_score": score}

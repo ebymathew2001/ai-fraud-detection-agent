@@ -15,6 +15,8 @@ Pure Python — no DB, no LLM, no external calls.
 """
 
 from agent.state import AgentState
+import logging  
+logger = logging.getLogger(__name__) 
 
 HIGH_RISK_CATEGORIES = {
     "JEWELRY",
@@ -37,5 +39,5 @@ def analyze_merchant(state: AgentState) -> AgentState:
 
     if category not in common_categories:
         score += 5
-
+    logger.info(f"merchant_score={min(score,15)}, category={category}") 
     return {**state, "merchant_score": min(score, 15)}

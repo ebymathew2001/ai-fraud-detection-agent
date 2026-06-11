@@ -15,17 +15,22 @@ CRITICAL RULE:
   or change the recommendation under any circumstance.
 """
 
-import json
+import logging 
+logger = logging.getLogger(__name__)
 import uuid
 from datetime import datetime, timezone
 
 from langchain_groq import ChatGroq
 from langchain_core.messages import SystemMessage, HumanMessage
-from dotenv import load_dotenv
+
 from agent.state import AgentState
 
-from config import GROQ_API_KEY, LLM_MODEL, LLM_TEMPERATURE, LLM_MAX_TOKENS
+from config import  LLM_MODEL, LLM_TEMPERATURE, LLM_MAX_TOKENS
 
+from pydantic import BaseModel
+
+class ReportReasons(BaseModel):
+    reasons: list[str]
 
 def generate_report(state: AgentState) -> AgentState:
     txn            = state["transaction"]
@@ -48,15 +53,7 @@ FIXED VALUES — you MUST NOT change these:
   risk_level:     {risk_level}
   recommendation: {recommendation}
 
-Return ONLY a valid JSON object in exactly this format.
-No markdown, no code fences, no extra text — just the JSON:
-{{
-  "reasons": [
-    "First reason here.",
-    "Second reason here.",
-    "Third reason here."
-  ]
-}}
+
 """
 
     # ── Human prompt — full transaction context ────────────────────
@@ -86,31 +83,21 @@ Write the reasons list explaining this specific assessment."""
         model=LLM_MODEL, temperature=LLM_TEMPERATURE, max_tokens=LLM_MAX_TOKENS
     )
 
-    response = llm.invoke([
+    logger.info(f"Calling LLM for txn_id={txn['txn_id']}")
+    structured_llm = llm.with_structured_output(ReportReasons)
+    
+    try:
+        response = structured_llm.invoke([
         SystemMessage(content=system_prompt),
         HumanMessage(content=human_prompt),
-    ])
-
-    # ── Parse the JSON response ────────────────────────────────────
-    raw = response.content.strip()
-
-    # Strip accidental markdown code fences if model adds them
-    if raw.startswith("```"):
-        parts = raw.split("```")
-        raw   = parts[1] if len(parts) > 1 else raw
-        if raw.startswith("json"):
-            raw = raw[4:]
-    raw = raw.strip()
-
-    try:
-        llm_output = json.loads(raw)
-        reasons    = llm_output.get("reasons", [])
+        ])
+        reasons = response.reasons
         if not reasons:
             raise ValueError("Empty reasons list")
-    except (json.JSONDecodeError, ValueError):
-        # Fallback — deterministic reasons if LLM output is unparseable
+    except Exception as e:
+        logger.error(f"Structured output failed: {e}, falling back to deterministic reasons")
         reasons = [
-            f"Amount Rs.{txn['amount']:.0f} is {txn['amount']/avg_spend:.1f}x the customer's 20-transaction average of Rs.{avg_spend:.0f}.",
+            f"Amount Rs.{txn['amount']:.0f} is {txn['amount']/avg_spend:.1f}x the customer's average of Rs.{avg_spend:.0f}.",
             f"Transaction location '{txn['transaction_location']}' classified as '{state['location_matched']}' relative to known customer locations.",
             f"Merchant category '{txn['merchant_category']}' scored {state['merchant_score']}/15 on the merchant risk scale.",
         ]
@@ -118,6 +105,7 @@ Write the reasons list explaining this specific assessment."""
     # ── Build the full report dict ─────────────────────────────────
     investigation_id = f"inv_{uuid.uuid4().hex[:8]}"
     created_at       = datetime.now(timezone.utc).isoformat()
+    
 
     report = {
         "investigation_id": investigation_id,
