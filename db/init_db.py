@@ -10,12 +10,11 @@ Creates fraud.db with 3 tables:
 """
 
 import sqlite3
-import os
-from dotenv import load_dotenv
 
-load_dotenv()
+from config import DATABASE_URL
 
-DATABASE_URL = os.getenv("DATABASE_URL", "fraud.db")
+
+
 
 
 def get_connection() -> sqlite3.Connection:
@@ -178,11 +177,28 @@ def seed_transactions(conn: sqlite3.Connection):
     cust003_suspicious = [
         ("TXN047", "CUST003", 120000, "Tech Galaxy", "ELECTRONICS", "Hong Kong", "2025-06-07T01:00:00", "SUSPICIOUS"),
     ]
+    
+    # ── Extra suspicious transactions (MEDIUM / HIGH / LOW bands) ──
+    extra_suspicious = [
+        # MEDIUM ~40 — 2.3x avg, known city Mumbai, GIFT_CARDS high risk
+        ("TXN101", "CUST001", 12000, "PayTM Wallet",  "GIFT_CARDS",   "Mumbai",    "2025-06-08T10:00:00", "SUSPICIOUS"),
+        # MEDIUM ~45 — 3.8x avg, nearby region Bangalore, FOREX high risk
+        ("TXN102", "CUST002", 18000, "FX Direct",     "FOREX",        "Bangalore", "2025-06-08T11:00:00", "SUSPICIOUS"),
+        # HIGH ~60 — 7.4x avg, novel Indian city Kolkata, GIFT_CARDS high risk
+        ("TXN103", "CUST003", 45000, "GiftCard Hub",  "GIFT_CARDS",   "Kolkata",   "2025-06-08T12:00:00", "SUSPICIOUS"),
+        # HIGH ~65 — 7.2x avg, novel Indian city Hyderabad, WIRE_TRANSFER high risk
+        ("TXN104", "CUST001", 38000, "Wire Express",  "WIRE_TRANSFER","Hyderabad", "2025-06-08T13:00:00", "SUSPICIOUS"),
+        # LOW ~25 — 2x avg, known city Chennai, CLOTHING normal category
+        ("TXN105", "CUST002", 9500,  "Lifestyle",     "CLOTHING",     "Chennai",   "2025-06-08T14:00:00", "SUSPICIOUS"),
+    ]
+
 
     all_txns = (
         cust001_normal + cust001_suspicious +
         cust002_normal + cust002_suspicious +
-        cust003_normal + cust003_suspicious
+        cust003_normal + cust003_suspicious + 
+        extra_suspicious
+       
     )
 
     cursor.executemany(
@@ -197,7 +213,7 @@ def seed_transactions(conn: sqlite3.Connection):
 
 
 def main():
-    print("🚀 Initializing fraud.db ...")
+    print("Initializing fraud.db ...")
     conn = get_connection()
     create_tables(conn)
     seed_customers(conn)

@@ -8,14 +8,12 @@ into ChromaDB using nomic-embed-text.
 Only needs to run ONCE — embeddings are persisted to ./chroma_store
 """
 
-import os
+
 import chromadb
 import ollama
-from dotenv import load_dotenv
 
-load_dotenv()
 
-CHROMA_PATH   = os.getenv("CHROMA_PATH", "./chroma_store")
+from config import CHROMA_PATH, EMBED_MODEL
 
 
 # ── 15 plain-English fraud pattern descriptions ──────────────────────────────
@@ -128,7 +126,7 @@ def get_embeddings(texts: list[str]) -> list[list[float]]:
 
     for text in texts:
         response = ollama.embed(
-            model="nomic-embed-text",
+            model=EMBED_MODEL,
             input=text,
         )
 

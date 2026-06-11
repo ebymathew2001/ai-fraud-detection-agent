@@ -16,15 +16,12 @@ What it does:
      fallback to home_city if the customer has no history.
 """
 
-import os
+
 import sqlite3
 from collections import Counter
-from dotenv import load_dotenv
 from agent.state import AgentState
+from config import DATABASE_URL
 
-load_dotenv()
-
-DATABASE_URL = os.getenv("DATABASE_URL", "fraud.db")
 
 
 def _get_db() -> sqlite3.Connection:

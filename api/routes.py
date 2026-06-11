@@ -9,7 +9,7 @@ All 4 REST endpoints:
   GET  /investigations          — summary list of all investigations
 """
 
-import os
+
 import json
 import sqlite3
 import traceback
@@ -17,8 +17,7 @@ import logging
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from dotenv import load_dotenv
-
+from config import DATABASE_URL
 
 from agent.graph import get_graph
 
@@ -30,9 +29,7 @@ logging.basicConfig(
 logger = logging.getLogger("fraud.routes")
 
 
-load_dotenv()
 
-DATABASE_URL = os.getenv("DATABASE_URL", "fraud.db")
 
 router = APIRouter()
 

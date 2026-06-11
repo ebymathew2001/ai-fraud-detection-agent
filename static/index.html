@@ -384,41 +384,37 @@ async function loadInvestigations() {
       return;
     }
 
-    data.forEach(inv => { _cache[inv.txn_id] = inv; });
-
-    const cards = data.map(inv => `
-      <div class="inv-card" onclick="openModal('${inv.txn_id}')">
-        <div class="inv-card-top">
-          <div>
-            <div class="inv-txn">${inv.txn_id}</div>
-            <div class="inv-sub">${inv.customer_name} · ${inv.transaction_location}</div>
+    const rows = data.map(inv => `
+      <tr style="cursor:pointer" onclick="openModal('${inv.txn_id}')">
+        <td><strong>${inv.txn_id}</strong></td>
+        <td>${inv.customer_name}</td>
+        <td><strong>${fmt(inv.amount)}</strong></td>
+        <td>${inv.merchant_category}</td>
+        <td>${inv.transaction_location}</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="bar-bg" style="width:80px">
+              <div class="bar-fill" style="width:${inv.risk_score}%;background:${scoreColor(inv.risk_score)}"></div>
+            </div>
+            <span style="font-size:12px;font-weight:600;color:${scoreColor(inv.risk_score)}">${inv.risk_score}</span>
           </div>
-          ${riskBadge(inv.risk_level)}
-        </div>
+        </td>
+        <td>${riskBadge(inv.risk_level)}</td>
+        <td>${recPill(inv.recommendation)}</td>
+        <td style="font-size:11px;color:var(--text-muted)">${new Date(inv.created_at).toLocaleString()}</td>
+      </tr>`).join('');
 
-        <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px">
-          ${fmt(inv.amount)} · ${inv.merchant_category}
-        </div>
-
-        <div style="font-size:11px;color:var(--text-muted);display:flex;justify-content:space-between;margin-bottom:3px">
-          <span>Risk Score</span>
-          <span style="font-weight:600;color:${scoreColor(inv.risk_score)}">${inv.risk_score}/100</span>
-        </div>
-        <div class="bar-bg"><div class="bar-fill" style="width:${inv.risk_score}%;background:${scoreColor(inv.risk_score)}"></div></div>
-
-        <div style="margin-top:12px">${recPill(inv.recommendation)}</div>
-
-        <ul class="reasons-list" style="margin-top:10px">
-          ${(inv.reasons||[]).slice(0,2).map(r=>`<li>${r}</li>`).join('')}
-          ${inv.reasons&&inv.reasons.length>2?`<li style="color:var(--accent);font-size:11px">+${inv.reasons.length-2} more...</li>`:''}
-        </ul>
-
-        <div style="margin-top:10px;font-size:11px;color:var(--text-muted)">
-          ${new Date(inv.created_at).toLocaleString()}
-        </div>
-      </div>`).join('');
-
-    $('inv-wrap').innerHTML = `<div class="inv-grid">${cards}</div>`;
+    $('inv-wrap').innerHTML = `
+      <div class="card" style="margin-bottom:0">
+        <table>
+          <thead><tr>
+            <th>TXN ID</th><th>Customer</th><th>Amount</th>
+            <th>Category</th><th>Location</th><th>Risk Score</th>
+            <th>Level</th><th>Action</th><th>Date</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
   } catch {
     $('inv-wrap').innerHTML = '<div class="empty"><div class="empty-icon">⚠️</div><h3>Could not load investigations</h3></div>';
   }
@@ -431,15 +427,15 @@ async function openModal(txnId) {
   $('overlay').classList.add('open');
   $('modal-body').innerHTML = '<div class="empty"><div class="spin"></div></div>';
 
-  let inv = _cache[txnId];
-  if (!inv) {
-    try {
-      inv = await fetch(`/investigations/${txnId}`).then(r => r.json());
-      _cache[txnId] = inv;
-    } catch {
-      $('modal-body').innerHTML = '<div class="empty"><h3>Failed to load</h3></div>';
-      return;
-    }
+  // Always fetch the full report from the per-record endpoint
+  // so sub_scores and matched_patterns are always available
+  let inv;
+  try {
+    inv = await fetch(`/investigations/${txnId}`).then(r => r.json());
+    _cache[txnId] = inv;
+  } catch {
+    $('modal-body').innerHTML = '<div class="empty"><h3>Failed to load</h3></div>';
+    return;
   }
 
   const r   = inv.report || inv;

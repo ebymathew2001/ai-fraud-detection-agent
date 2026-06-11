@@ -11,15 +11,11 @@ Kept deliberately separate from generate_report so that:
   - You can swap the storage backend without touching the LLM node.
 """
 
-import os
+
 import json
 import sqlite3
-from dotenv import load_dotenv
 from agent.state import AgentState
-
-load_dotenv()
-
-DATABASE_URL = os.getenv("DATABASE_URL", "fraud.db")
+from config import DATABASE_URL
 
 
 def _get_db() -> sqlite3.Connection:

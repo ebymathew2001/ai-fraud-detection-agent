@@ -15,7 +15,6 @@ CRITICAL RULE:
   or change the recommendation under any circumstance.
 """
 
-import os
 import json
 import uuid
 from datetime import datetime, timezone
@@ -23,12 +22,9 @@ from datetime import datetime, timezone
 from langchain_groq import ChatGroq
 from langchain_core.messages import SystemMessage, HumanMessage
 from dotenv import load_dotenv
-
 from agent.state import AgentState
 
-load_dotenv()
-
-GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+from config import GROQ_API_KEY, LLM_MODEL, LLM_TEMPERATURE, LLM_MAX_TOKENS
 
 
 def generate_report(state: AgentState) -> AgentState:
@@ -87,10 +83,7 @@ Write the reasons list explaining this specific assessment."""
 
     # ── Call Groq LLM ──────────────────────────────────────────────
     llm = ChatGroq(
-        model="llama-3.3-70b-versatile",
-        api_key=GROQ_API_KEY,
-        temperature=0.3,
-        max_tokens=800,
+        model=LLM_MODEL, temperature=LLM_TEMPERATURE, max_tokens=LLM_MAX_TOKENS
     )
 
     response = llm.invoke([

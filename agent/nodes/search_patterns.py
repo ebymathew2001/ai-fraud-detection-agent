@@ -13,26 +13,23 @@ What it does:
   4. pattern_score = len(matches) * 5, max 15.
 """
 
-import os
+
 import chromadb
-from dotenv import load_dotenv
+
 from agent.state import AgentState
 
-load_dotenv()
-
-CHROMA_PATH   = os.getenv("CHROMA_PATH", "./chroma_store")
-NOMIC_API_KEY = os.getenv("NOMIC_API_KEY")
+import ollama
+from config import CHROMA_PATH,  EMBED_MODEL, CHROMA_COLLECTION
 
 
 def _get_chroma_collection() -> chromadb.Collection:
     client = chromadb.PersistentClient(path=CHROMA_PATH)
-    return client.get_collection("fraud_patterns")
+    return client.get_collection(CHROMA_COLLECTION)
 
 
 def _embed_query(text: str) -> list[float]:
-    import ollama
     response = ollama.embed(
-        model="nomic-embed-text",
+       model=EMBED_MODEL,
         input=text,
     )
     return response["embeddings"][0]
