@@ -47,3 +47,7 @@ class AgentState(TypedDict, total=False):
 
     # ── AFTER save_investigation ──────────────────────────────────
     investigation_id: str                # UUID of the saved row
+
+    # ── ERROR HANDLING ────────────────────────────────────────────
+    status: str                          # "ok" | "error"          ← new
+    error_message: str                   # "" or error description  ← new

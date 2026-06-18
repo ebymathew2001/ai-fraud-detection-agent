@@ -29,6 +29,11 @@ from agent.nodes import (
 # Singleton — compiled once, reused on every API call
 _compiled_graph = None
 
+def route_after_load(state: AgentState):           
+    if state.get("status") == "error":             
+        return END                                 
+    return "analyze_amount"                        
+
 
 def build_graph() -> StateGraph:
     graph = StateGraph(AgentState)
@@ -45,7 +50,7 @@ def build_graph() -> StateGraph:
 
     # Wire edges — strict linear pipeline, no branching
     graph.add_edge(START,                       "load_context")
-    graph.add_edge("load_context",              "analyze_amount")
+    graph.add_conditional_edges("load_context", route_after_load)
     graph.add_edge("analyze_amount",            "analyze_location")
     graph.add_edge("analyze_location",          "analyze_merchant")
     graph.add_edge("analyze_merchant",          "search_patterns")

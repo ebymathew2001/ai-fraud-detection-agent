@@ -45,7 +45,8 @@ def load_context(state: AgentState) -> AgentState:
 
     if not txn_row:
         conn.close()
-        raise ValueError(f"Transaction '{txn_id}' not found in database.")
+        logger.warning(f"Transaction '{txn_id}' not found in database.")
+        return {**state, "status": "error", "error_message": f"Transaction '{txn_id}' not found."}
 
     transaction = dict(txn_row)
 
