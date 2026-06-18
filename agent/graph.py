@@ -50,7 +50,14 @@ def build_graph() -> StateGraph:
 
     # Wire edges — strict linear pipeline, no branching
     graph.add_edge(START,                       "load_context")
-    graph.add_conditional_edges("load_context", route_after_load)
+    graph.add_conditional_edges(
+        "load_context",
+        route_after_load,
+        {
+            "error": END,
+            "next": "analyze_amount",
+        },
+    )
     graph.add_edge("analyze_amount",            "analyze_location")
     graph.add_edge("analyze_location",          "analyze_merchant")
     graph.add_edge("analyze_merchant",          "search_patterns")
